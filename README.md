@@ -8,37 +8,57 @@ You can use this module in the following ways:
 '''
 
 	#include <iostream>
-	
+	#include "PubSub.h"
+
 	struct Foo {
-		int value;
-		Foo(int value) : value(value) {};
+		Foo() {};
+
+		/// object functor style
+		void operator() (int e, int arg) {
+			this->callback(e, arg);
+		}
+
+		/// simple function
+		void callback(int e, int arg) {
+			printf("The argument %d\n", arg);
+		}
 	};
-
-	int main(int artc, char** argv) {
-		// 1
-		utils::PubSub<int, int> pubSub;
-		pubSub.on(1, [](int e, int arg) {
-			std::cout << e << " " << arg << std::endl;
+			
+	int main(int argc, char** argv) {
+		// 1  - used lyambda function
+		utils::PubSub<int, int> pubsub1;
+		pubsub1.on(1, [](int e, int arg) {
+			printf("The argument %d\n", arg);
 		});
-		pubSub.emit(1, 1);
-
-		// 2 
+		pubsub1.emit(1, 1);
+			
+		// 2 - used lyambda with a class argument
 		utils::PubSub<int, Foo> pubsub2;
-		pubsub2.on(1, [](int e, Foo arg) {
-			std::cout << e << " " << arg.value << std::endl;
-		});
+		pubsub2.on(2, [](int e, Foo& arg) {arg(e, 2);});
+		pubsub2.emit(2, Foo());
+		
+		// 3 - capture object for pass it to the lyambda function
+		Foo foo;
+		utils::PubSub<int, int> pubsub3;
+		pubsub3.on(3, [&foo](int e, int arg) { foo(e, arg);	});
+		pubsub3.emit(3, 3);
 
-		pubsub2.emit(1, std::forward<Foo>(Foo(2)));
+		// 4 - used std::bind for binding class object function
+		utils::PubSub<int, int> pubsub4;
+		pubsub4.on(4,std::bind(&Foo::callback, &foo, std::placeholders::_1, std::placeholders::_2));
+		pubsub4.emit(4, 4);
 
-		// 3
-		utils::PubSub<int, Foo*> pubsub3;
-		pubsub3.on(1, [](int e, Foo* arg) {
-			std::cout << e << " " << arg->value << std::endl;
-		});
-
-		Foo* foo = new Foo(3);
-		pubsub3.emit(1, std::forward<Foo*>(foo));
-		delete foo;
+		// 5 - pass pointer to the object
+		Foo* foo5 = new Foo();
+		utils::PubSub<int, Foo> pubsub5;
+		pubsub5.on(5, [](int e, Foo& arg) { arg(e, 5); });
+		pubsub5.emit(5, std::move(*foo5));
+		delete foo5;
+			
+		// 6 - used object functor
+		utils::PubSub<int, int> pubsub6;
+		pubsub6.on(6, Foo());
+		pubsub6.emit(6, 6);
 
 		std::getchar();
 		return 0;
