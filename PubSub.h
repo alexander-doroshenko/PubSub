@@ -1,69 +1,78 @@
 #pragma once
 
-/// <summary> Publish/Subscribe pattern:
+/// <summary> 
+///		Simple implementation of the Publish/Subscribe pattern.
+/// </summary>
+/// <author> Doroshenko Alexander </author>
 /// <example>
 /// <code>
 /// 
 /// #include <iostream>
 /// #include "PubSub.h"
-/// 
-/// struct Foo {
-/// 	Foo() {};
-/// 
-/// 	/// object functor style
-/// 	void operator() (int e, int arg) {
-/// 		this->callback(e, arg);
-/// 	}
-/// 
-/// 	/// simple function
-/// 	void callback(int e, int arg) {
-/// 		printf("The argument %d\n", arg);
-/// 	}
-/// };
-/// 
-/// int main(int argc, char** argv) {
-/// 	// 1  - used lyambda function
-/// 	utils::PubSub<int, int> pubsub1;
-/// 	pubsub1.on(1, [](int e, int arg) {
-/// 		printf("The argument %d\n", arg);
-/// 	});
-/// 	pubsub1.emit(1, 1);
-/// 
-/// 	// 2 - used lyambda with a class argument
-/// 	utils::PubSub<int, Foo> pubsub2;
-/// 	pubsub2.on(2, [](int e, Foo& arg) {arg(e, 2); });
-/// 	pubsub2.emit(2, Foo());
-/// 
-/// 	// 3 - capture object for pass it to the lyambda function
-/// 	Foo foo;
-/// 	utils::PubSub<int, int> pubsub3;
-/// 	pubsub3.on(3, [&foo](int e, int arg) { foo(e, arg);	});
-/// 	pubsub3.emit(3, 3);
-/// 
-/// 	// 4 - used std::bind for binding class object function
-/// 	utils::PubSub<int, int> pubsub4;
-/// 	pubsub4.on(4, std::bind(&Foo::callback, &foo, std::placeholders::_1, std::placeholders::_2));
-/// 	pubsub4.emit(4, 4);
-/// 
-/// 	// 5 - pass pointer to the object
-/// 	Foo* foo5 = new Foo();
-/// 	utils::PubSub<int, Foo> pubsub5;
-/// 	pubsub5.on(5, [](int e, Foo& arg) { arg(e, 5); });
-/// 	pubsub5.emit(5, std::move(*foo5));
-/// 	delete foo5;
-/// 
-/// 	// 6 - used object functor
-/// 	utils::PubSub<int, int> pubsub6;
-/// 	pubsub6.on(6, Foo());
-/// 	pubsub6.emit(6, 6);
-/// 
-/// 	std::getchar();
-/// 	return 0;
-/// }
-/// 
+///	
+///	struct Foo {
+///		Foo() {};
+///	
+///		void operator() (int e, int arg) {
+///			this->callback(e, arg);
+///		}
+///	
+///		void callback(int e, int arg) {
+///			printf("The argument %d\n", arg);
+///		}
+///	};
+///			
+///	int main(int argc, char** argv) {
+///		// The lambda-function with a simple type
+///		// argument is used like callback
+///		utils::PubSub<int, int> pubsub1;
+///		pubsub1.on(1, [](int e, int arg) {
+///			printf("The argument %d\n", arg);
+///		});
+///		pubsub1.emit(1, 1);
+///			
+///		// The lambda-function with a class type 
+///		// argument is used like a callback 
+///		utils::PubSub<int, Foo> pubsub2;
+///		pubsub2.on(2, [](int e, Foo& arg) {arg(e, 2);});
+///		pubsub2.emit(2, Foo());
+///		
+///		// The object is passed to the lambda-function
+///		Foo foo;
+///		utils::PubSub<int, int> pubsub3;
+///		pubsub3.on(3, [&foo](int e, int arg) { foo(e, arg);	});
+///		pubsub3.emit(3, 3);
+///	
+///		// std::bind
+///		utils::PubSub<int, int> pubsub4;
+///		pubsub4.on(4,std::bind(&Foo::callback, &foo, std::placeholders::_1, std::placeholders::_2));
+///		pubsub4.emit(4, 4);
+///	
+///		// passed pointer to the object
+///		Foo* foo5 = new Foo();
+///		utils::PubSub<int, Foo> pubsub5;
+///		pubsub5.on(5, [](int e, Foo& arg) { arg(e, 5); });
+///		pubsub5.emit(5, std::move(*foo5));
+///		delete foo5;
+///			
+///		// object functor (override round brackets operator )
+///		utils::PubSub<int, int> pubsub6;
+///		pubsub6.on(6, Foo());
+///		pubsub6.on(6, Foo());
+///		pubsub6.on(6, Foo());
+///		pubsub6.on(7, Foo());
+///		pubsub6.emit(6, 6);
+///		pubsub6.emit(7, 7);
+///		
+///		// test the "off" function
+///		pubsub6.off(6);
+///		pubsub6.emit(6, 6);
+///	
+///		std::getchar();
+///		return 0;
+///	}
 /// </code>
 /// </example>
-/// </summary>
 
 #include <functional>
 #include <map>
@@ -71,33 +80,70 @@
 namespace utils {
 
 	template <typename Key, typename Arg>
-	class PubSub {
-	private:
-		std::map< Key, std::function<void(Key, Arg)>> callbacks;
+	class PubSub 
+	{
+		// type of the callback-function
+		typedef std::function<void(Key, Arg)> Callback;
+		
+		// holds all pairs EventName -> Callback
+		std::multimap< Key, Callback> callbacks;
+		
 
 	public:
 
 		///
 		PubSub() {};
 
-		///
-		void emit(Key&& eventName, Arg&& arg) {
+		/// <summary>
+		///		run all callbacks associated with 
+		///		specified event name and passes given 
+		///		argument into it
+		/// </summary>
+		///	<param name="eventName"> emited event </param>
+		/// <param name="arg"> passed argument </param>
+		void emit(Key&& eventName, Arg&& arg) 
+		{
 			if (this->callbacks.count(eventName)) {
-				this->callbacks[eventName] (std::forward<Key>(eventName), std::forward<Arg>(arg));
+				typedef std::multimap<Key, Callback>::iterator CallbacksIterator;
+
+				std::pair<CallbacksIterator, CallbacksIterator> range = 
+					this->callbacks.equal_range(eventName);
+
+				for (CallbacksIterator iterator = range.first; iterator != range.second; iterator++) {
+					Callback callback = iterator->second;
+					callback(std::forward<Key>(eventName), std::forward<Arg>(arg));
+				}
 			}
 		}
 
-		///
-		void on(Key&& eventName, std::function<void(Key, Arg)>&& callback) {
+		/// <summary>
+		///		associates callback with an event
+		/// </summary>
+		///	<param name="eventName"> 
+		///		event with which the 
+		///		function is associated 
+		///	</param>
+		/// <param name="callback"> 
+		///		function to be called when 
+		///		the specified event happens 
+		///	</param>
+		void on(Key&& eventName, Callback&& callback) 
+		{
 			this->callbacks.emplace(std::forward<Key>(eventName), 
 				callback);
 		}
 
-		///
-		void off(const Key&& eventName) {
+		/// <summary>
+		///		remove all callbacks associated 
+		///		with the specified event
+		/// </summary>
+		/// <param name="event> removing event </param>
+		void off(const Key&& eventName) 
+		{
 			if (this->callbacks.count(eventName)) {
 				this->callbacks.erase(eventName);
 			}
 		}
 	};
+
 }
