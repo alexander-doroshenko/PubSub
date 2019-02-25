@@ -75,7 +75,7 @@
 /// </example>
 
 #include <functional>
-#include <map>
+#include <unordered_map>
 
 namespace utils {
 
@@ -86,7 +86,7 @@ namespace utils {
 		typedef std::function<void(Key, Arg)> Callback;
 		
 		// holds all pairs EventName -> Callback
-		std::multimap< Key, Callback> callbacks;
+		std::unordered_multimap< Key, Callback> callbacks;
 		
 
 	public:
@@ -103,16 +103,11 @@ namespace utils {
 		/// <param name="arg"> passed argument </param>
 		void emit(Key&& eventName, Arg&& arg) 
 		{
-			if (this->callbacks.count(eventName)) {
-				typedef std::multimap<Key, Callback>::iterator CallbacksIterator;
-
-				std::pair<CallbacksIterator, CallbacksIterator> range = 
-					this->callbacks.equal_range(eventName);
-
-				for (CallbacksIterator iterator = range.first; iterator != range.second; iterator++) {
-					Callback callback = iterator->second;
-					callback(std::forward<Key>(eventName), std::forward<Arg>(arg));
-				}
+			auto callbacks = this->callbacks.equal_range(eventName);
+			for (auto it = callbacks.first; it != callbacks.second; it++) 
+			{
+				auto &[_, callback] = *it;
+				callback(std::forward<Key>(eventName), std::forward<Arg>(arg));
 			}
 		}
 
@@ -129,8 +124,7 @@ namespace utils {
 		///	</param>
 		void on(Key&& eventName, Callback&& callback) 
 		{
-			this->callbacks.emplace(std::forward<Key>(eventName), 
-				callback);
+			this->callbacks.emplace(std::forward<Key>(eventName), std::forward<Callback>(callback));
 		}
 
 		/// <summary>
@@ -145,5 +139,4 @@ namespace utils {
 			}
 		}
 	};
-
 }
