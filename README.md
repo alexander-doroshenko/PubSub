@@ -23,7 +23,7 @@ You can use this module in the following ways:
 	int main(int argc, char** argv) {
 		// The lambda-function with a simple type
 		// argument is used like callback
-		utils::PubSub<int, int> pubsub1;
+		awkward::PubSub<int, int> pubsub1;
 		pubsub1.on(1, [](int e, int arg) {
 			printf("The argument %d\n", arg);
 		});
@@ -31,31 +31,31 @@ You can use this module in the following ways:
 			
 		// The lambda-function with a class type 
 		// argument is used like a callback 
-		utils::PubSub<int, Foo> pubsub2;
+		awkward::PubSub<int, Foo> pubsub2;
 		pubsub2.on(2, [](int e, Foo& arg) {arg(e, 2);});
 		pubsub2.emit(2, Foo());
 		
 		// The object is passed to the lambda function
 		// capture list 
 		Foo foo;
-		utils::PubSub<int, int> pubsub3;
+		awkward::PubSub<int, int> pubsub3;
 		pubsub3.on(3, [&foo](int e, int arg) { foo(e, arg);	});
 		pubsub3.emit(3, 3);
 
 		// std::bind
-		utils::PubSub<int, int> pubsub4;
+		awkward::PubSub<int, int> pubsub4;
 		pubsub4.on(4,std::bind(&Foo::callback, &foo, std::placeholders::_1, std::placeholders::_2));
 		pubsub4.emit(4, 4);
 
 		// passed pointer to the object
 		Foo* foo5 = new Foo();
-		utils::PubSub<int, Foo> pubsub5;
+		awkward::PubSub<int, Foo> pubsub5;
 		pubsub5.on(5, [](int e, Foo& arg) { arg(e, 5); });
 		pubsub5.emit(5, std::move(*foo5));
 		delete foo5;
 			
 		// object functor (override round brackets operator )
-		utils::PubSub<int, int> pubsub6;
+		awkward::PubSub<int, int> pubsub6;
 		pubsub6.on(6, Foo());
 		pubsub6.on(6, Foo());
 		pubsub6.on(6, Foo());
